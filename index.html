@@ -26,13 +26,23 @@
             // カメラから映像を取得するためのvideo要素
             const video = document.createElement("video");
 
+
+            // need to fix (can be more elegant)
+            function isSmartPhone() {
+                if (navigator.userAgent.match(/iPhone|Android.+Mobile/)) {
+                    return {
+                        facingMode: {
+                            exact: "environment"
+                        }
+                    };
+                } else {
+                    return true;
+                }
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: false,
-                video: {
-                    facingMode: {
-                        exact: "environment"
-                    }
-                }
+                video: isSmartPhone()
             });
 
             video.srcObject = stream;
@@ -70,7 +80,7 @@
             function filter(data) {
                 // 画像処理を行う
                 /* const threshold = 255 / 2;
-
+ 
                 const getColor = (data, i) => {
                     // threshold < rgbの平均
                     const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
@@ -82,7 +92,7 @@
                         return 0;
                     }
                 };
-
+ 
                 for (let i = 0; i < data.length; i += 4) {
                     const color = getColor(data, i);
                     data[i] = data[i + 1] = data[i + 2] = color;
