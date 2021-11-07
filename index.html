@@ -14,7 +14,8 @@
     <canvas id="canvas"></canvas>
 
     <script>
-
+        //    https://kuroeveryday.blogspot.com/2017/10/image-filters-with-canvas-algorithm.html
+        // https://kuroeveryday.blogspot.com/2019/01/real-time-video-filter-with-canvas.html
         async function main() {
             // 表示用のCanvas
             const canvas = document.getElementById("canvas");
@@ -26,7 +27,12 @@
             const video = document.createElement("video");
 
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: true
+                audio: false,
+                video: {
+                    facingMode: {
+                        exact: "environment"
+                    }
+                }
             });
 
             video.srcObject = stream;
