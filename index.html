@@ -1,33 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Webcam Sudoku Solver</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+    <title>ファイル選択（カメラ起動）テスト</title>
+    <style>
+        @import url(http://fonts.googleapis.com/earlyaccess/notosansjapanese.css);
+
+        html,
+        body {
+            font-size: 16px;
+            font-family: 'Noto Sans Japanese', sans-serif;
+            text-align: center;
+        }
+
+        canvas {
+            border: 1px #333 solid;
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
 </head>
 
 <body>
+    <header>
+        <h1>ファイル選択（カメラ起動）テスト</h1>
+    </header>
+    <main>
+        <p>元画像 <span id="src-width-height">width: height: </span></p>
+        <p>リサイズ <span id="dst-width-height">width: height: </span></p>
+        <p><input type="file" accept="image/*" capture="camera" id="file-image"></p>
+        <canvas id="mycanvas">Canvasに対応しているブラウザを使用して下さい。</canvas>
 
-    <video id="camera"></video>
-    <canvas id="canvas"></canvas>
+    </main>
 
     <script>
-        //    https://kuroeveryday.blogspot.com/2017/10/image-filters-with-canvas-algorithm.html
-        // https://kuroeveryday.blogspot.com/2019/01/real-time-video-filter-with-canvas.html
-        async function main() {
-            // 表示用のCanvas
-            const canvas = document.getElementById("canvas");
-            const ctx = canvas.getContext("2d");
-            // 画像処理用のオフスクリーンCanvas
-            const offscreen = document.createElement("canvas");
-            const offscreenCtx = offscreen.getContext("2d");
-            // カメラから映像を取得するためのvideo要素
-            const video = document.createElement("video");
+        (function () {
+            var canvas = document.getElementById('mycanvas');
+            window.onload = function () {
+                if (checkFileApi() && checkCanvas(canvas)) {
+                    //ファイル選択
+                    var file_image = document.getElementById('file-image');
+                    file_image.addEventListener('change', selectReadfile, false);
+                }
+            }
 
+            //canvas に対応しているか
+            function checkCanvas(canvas) {
+                if (canvas && canvas.getContext) {
+                    return true;
+                }
+                alert('Not Supported Canvas.');
+                return false;
+            }
 
-            //端末がモバイルか　https://gist.github.com/Cartman0/70393c046522461d241c
+            // FileAPIに対応しているか
+            function checkFileApi() {
+                // Check for the various File API support.
+                if (window.File && window.FileReader && window.FileList && window.Blob) {
+                    // Great success! All the File APIs are supported.
+                    return true;
+                }
+                alert('The File APIs are not fully  in this browser.');
+                return false;
+            }
+
+            //端末がモバイルか
             var _ua = (function (u) {
                 var mobile = {
                     0: (u.indexOf("windows") != -1 && u.indexOf("phone") != -1)
@@ -54,92 +93,93 @@
                 };
             })(window.navigator.userAgent.toLowerCase());
 
-            // need to fix (can be more elegant)
-            function isSmartPhone() {
-                if (navigator.userAgent.match(/iPhone|Android.+Mobile/)) {
-                    return {
-                        facingMode: {
-                            exact: "environment"
-                        }
-                    };
-                } else {
-                    return true;
+            //ファイルが選択されたら読み込む
+            function selectReadfile(e) {
+                var file = e.target.files;
+                var reader = new FileReader();
+                //dataURL形式でファイルを読み込む
+                reader.readAsDataURL(file[0]);
+                //ファイルの読込が終了した時の処理
+                reader.onload = function () {
+                    readDrawImg(reader, canvas, 0, 0);
                 }
             }
 
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: false,
-                video: isSmartPhone()
-            });
-
-            video.srcObject = stream;
-            // streamの読み込み完了
-            video.onloadedmetadata = () => {
-                video.play();
-
-                // Canvasのサイズを映像に合わせる
-                // canvas.width = offscreen.width = video.videoWidth;
-                // canvas.height = offscreen.height = video.videoHeight;
-
-                // モバイルであればリサイズ
-                if (_ua.Mobile[0]) {
-                    canvas.width = offscreen.width = video.videoWidth / 2;
-                    canvas.height = offscreen.height = video.videoHeight / 2;
-                } else {
-                    // モバイル以外では元サイズ
-                    canvas.width = offscreen.width = video.videoWidth;
-                    canvas.height = offscreen.height = video.videoHeight;
-                }
-                tick();
-            };
-
-            // 1フレームごとに呼び出される処理
-            function tick() {
-                // カメラの映像をCanvasに描画する
-                offscreenCtx.drawImage(video, 0, 0);
-
-                // イメージデータを取得する（[r,g,b,a,r,g,b,a,...]のように1次元配列で取得できる）
-                const imageData = offscreenCtx.getImageData(0, 0, offscreen.width, offscreen.height);
-                // imageData.dataはreadonlyなのでfilterメソッドで直接書き換える
-                filter(imageData.data);
-
-                // オフスクリーンCanvasを更新する
-                offscreenCtx.putImageData(imageData, 0, 0);
-
-                // 表示用Canvasに描画する
-                ctx.drawImage(offscreen, 0, 0);
-
-                // 次フレームを処理する
-                window.requestAnimationFrame(tick);
-            }
-
-            function filter(data) {
-                // 画像処理を行う
-                /* const threshold = 255 / 2;
- 
-                const getColor = (data, i) => {
-                    // threshold < rgbの平均
-                    const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                    if (threshold < avg) {
-                        // white
-                        return 255;
+            function readDrawImg(reader, canvas, x, y) {
+                var img = readImg(reader);
+                img.onload = function () {
+                    var w = img.width;
+                    var h = img.height;
+                    printWidthHeight('src-width-height', true, w, h);
+                    // モバイルであればリサイズ
+                    if (_ua.Mobile[0]) {
+                        var resize = resizeWidthHeight(1024, w, h);
+                        printWidthHeight('dst-width-height', resize.flag, resize.w, resize.h);
+                        drawImgOnCav(canvas, img, x, y, resize.w, resize.h);
                     } else {
-                        // black
-                        return 0;
+                        // モバイル以外では元サイズ
+                        printWidthHeight('dst-width-height', false, 0, 0);
+                        drawImgOnCav(canvas, img, x, y, w, h);
                     }
-                };
- 
-                for (let i = 0; i < data.length; i += 4) {
-                    const color = getColor(data, i);
-                    data[i] = data[i + 1] = data[i + 2] = color;
-                } */
+                }
             }
-        }
 
-        main();
+            //ファイルの読込が終了した時の処理
+            function readImg(reader) {
+                //ファイル読み取り後の処理
+                var result_dataURL = reader.result;
+                var img = new Image();
+                img.src = result_dataURL;
+                return img;
+            }
 
+            //キャンバスにImageを表示
+            function drawImgOnCav(canvas, img, x, y, w, h) {
+                var ctx = canvas.getContext('2d');
+                canvas.width = w;
+                canvas.height = h;
+                ctx.drawImage(img, x, y, w, h);
+            }
+
+            // リサイズ後のwidth, heightを求める
+            function resizeWidthHeight(target_length_px, w0, h0) {
+                //リサイズの必要がなければ元のwidth, heightを返す
+                var length = Math.max(w0, h0);
+                if (length <= target_length_px) {
+                    return {
+                        flag: false,
+                        w: w0,
+                        h: h0
+                    };
+                }
+                //リサイズの計算
+                var w1;
+                var h1;
+                if (w0 >= h0) {
+                    w1 = target_length_px;
+                    h1 = h0 * target_length_px / w0;
+                } else {
+                    w1 = w0 * target_length_px / h0;
+                    h1 = target_length_px;
+                }
+                return {
+                    flag: true,
+                    w: parseInt(w1),
+                    h: parseInt(h1)
+                };
+            }
+
+            function printWidthHeight(width_height_id, flag, w, h) {
+                var wh = document.getElementById(width_height_id);
+                if (!flag) {
+                    wh.innerHTML = "なし";
+                    return;
+                }
+                wh.innerHTML = 'width:' + w + ' height:' + h;
+            }
+
+        })();
     </script>
-
 </body>
 
 </html>
